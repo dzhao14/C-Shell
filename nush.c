@@ -7,6 +7,30 @@
 #include <fcntl.h>
 
 void
+exec_background(char * command1, char** args1, char* command2, char** args2) {
+	int cpid;
+	if ((cpid = fork())) {
+		int cpid2;
+		if ((cpid2 = fork())) {
+			int status2;
+			waitpid(cpid2, &status2, 0);
+			if (WIFEXITED(status2)) {
+			}
+		}
+		else {
+			execvp(command2, args2);
+			printf("second half failed\n");
+			exit(1);
+		}
+	}
+	else {
+		execvp(command1, args1);
+		printf("first half fails.\n");
+		exit(1);
+	}	
+}
+
+void
 exec_pipe(char * command1, char** args1, char* command2, char** args2) {
 	int cpid;
 	//int pipe_fds[2];
@@ -91,6 +115,9 @@ parse_input(char* input)
 	}
 	else {
 		int pipe = 0;
+		int background = 0;
+		char* backargs1[100];
+		char* backargs2[100];
 		char* pipeargs1[100];
 		char* pipeargs2[100];
 		char* args[100];
@@ -149,15 +176,34 @@ parse_input(char* input)
 				pipeargs1[jj] = 0;
 				ii = 0;
 			}
+			else if (strcmp(arg, "&") == 0) {
+				background = 1;
+				int jj = 0;
+				for (jj; args[jj]; jj++) {
+					backargs1[jj] = args[jj];
+				}
+				backargs1[jj] = 0;
+				ii = 0;
+			}
 			else {
 				args[ii] = arg;
 				ii++;
 			}
 			arg = strtok(NULL, " \n");
 		}
-		if (pipe == 0) {
+		if (pipe == 0 && background == 0) {
  			args[ii] = 0;
 			execvp(args[0], args);
+			exit(1);
+		}
+		else if (background = 1) {
+			args[ii] = 0;
+			int jj = 0;
+			for (jj; args[jj]!=0; jj++) {
+				backargs2[jj] = args[jj];
+			}
+			backargs2[jj] = 0;
+			exec_background(backargs1[0], backargs1, backargs2[0], backargs2);
 			exit(1);
 		}
 		else {
