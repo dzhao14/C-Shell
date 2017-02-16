@@ -168,7 +168,7 @@ parse_input(char* input)
 			else if (strcmp(arg, "&") == 0) {
 				args[ii] = 0;
 				exec_background(args[0], args);
-				return;
+				kill(getpid(), SIGTERM);
 			}
 			else {
 				args[ii] = arg;
