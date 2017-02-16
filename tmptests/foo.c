@@ -3,6 +3,10 @@
 #include<stdio.h>
 
 int main(int argc, char* argv[]) {
+	int opid = getpid();
+	int opar = getppid();
+	printf("opid is: %d\n", opid);
+	printf("opar is: %d\n", opar);
 	int cpid;
 	if((cpid = fork())) {
 		printf("parent pid is: %d\n", getpid());

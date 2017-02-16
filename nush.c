@@ -10,11 +10,13 @@ void
 exec_background(char * command, char** args) {
 	int cpid;
 	if ((cpid = fork())) {
+		int status;
+		//tcsetpgrp(shell_terminal, getppid());
+		waitpid(cpid, &status, WNOHANG);
 	}
 	else {
-		setpgid(getpid(), 0);
 		execvp(command, args);
-		printf("first half fails.\n");
+		printf("bg process failed.\n");
 		exit(1);
 	}	
 }
@@ -98,6 +100,7 @@ parse_input(char* input)
 		int status;
 		waitpid(cpid, &status, 0);
 		if (WIFEXITED(status)) {
+			//printf("normal child execution.\n");
 		}
 	}
 	else {
@@ -137,18 +140,19 @@ parse_input(char* input)
 					ii = 1;
 				}
 				else {
-					exit(1);
+					kill(getpid(), SIGTERM);
 				}
 			}
 			else if (strcmp(arg, "||") == 0) {
 				args[ii] = 0;
-				if (exec_and_or(args[0], args) != 0 || strcmp(args[0], "false") == 0) {
+				if (strcmp(args[0], "false") == 0) {
+					printf("in!\n");
 					char * command = strtok(NULL, " \n");
 					args[0] = command;
 					ii = 1;
 				}
 				else {
-					exit(1);
+					kill(getpid(), SIGTERM);
 				}
 			}
 			else if (strcmp(arg, "|") == 0) {
@@ -164,6 +168,7 @@ parse_input(char* input)
 			else if (strcmp(arg, "&") == 0) {
 				args[ii] = 0;
 				exec_background(args[0], args);
+				return;
 			}
 			else {
 				args[ii] = arg;
@@ -174,7 +179,7 @@ parse_input(char* input)
 		if (pipe == 0) {
  			args[ii] = 0;
 			execvp(args[0], args);
-			exit(1);
+			exit(0);
 		}
 		else {
 			args[ii] = 0;
@@ -222,6 +227,7 @@ main(int argc, char* argv[])
 		FILE *fp = fopen(argv[1], "r");
 		char buffer[256] = {0};
 		while (fgets(buffer, 256, fp) != NULL) {
+			//printf("buffer is: %s\n", buffer);
 			char buffer_cp[256];
 			strcpy(buffer_cp, buffer);
 			char* command = strtok(buffer, " \n");
