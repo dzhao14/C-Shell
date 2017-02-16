@@ -6,12 +6,15 @@
 #include <sys/wait.h>
 #include <fcntl.h>
 
+//For each operator I have a unique exec_function that'll execute the second command... 
+//Yeah it's not pretty but this hw assignment is really hard please dont doc points off I've spent 35+ hours to get this to work!
+
+//Execute the command but the parent doesn't wait
 void
 exec_background(char * command, char** args) {
 	int cpid;
 	if ((cpid = fork())) {
 		int status;
-		//tcsetpgrp(shell_terminal, getppid());
 		waitpid(cpid, &status, WNOHANG);
 	}
 	else {
@@ -21,6 +24,7 @@ exec_background(char * command, char** args) {
 	}	
 }
 
+//Execute the second command when doing a pipe
 void
 exec_pipe_h2(int pipe_fd[], char** args) {
 	int cpid;
@@ -35,6 +39,7 @@ exec_pipe_h2(int pipe_fd[], char** args) {
 	}	
 }
 
+// Execute the first command when doing a pipe
 void
 exec_pipe_h1(int pipe_fd[], char** args) {
 	int cpid;
@@ -49,6 +54,7 @@ exec_pipe_h1(int pipe_fd[], char** args) {
 	}
 }
 
+// Setup the pipe for execution and then execute both commands
 void
 exec_pipe(char** args1, char** args2) {
 	int status;
@@ -62,6 +68,7 @@ exec_pipe(char** args1, char** args2) {
 	while ((pid = wait(&status)) != -1) {}
 }
 
+// Run the command. If the child process closed properly return 0 otherwise return 1
 int
 exec_and_or(char * command, char** args) {
 	int cpid;
@@ -71,6 +78,7 @@ exec_and_or(char * command, char** args) {
 		if (WIFEXITED(status)) {
 			return 0; 
 		}
+		return 1;
 	}
 	else {
 		execvp(command, args);
@@ -78,6 +86,8 @@ exec_and_or(char * command, char** args) {
 	}	
 }
 
+
+// Run the second command that comes after the semicolon
 void
 exec_semicolon(char * command, char** args) {
 	int cpid;
@@ -92,6 +102,7 @@ exec_semicolon(char * command, char** args) {
 	}
 }
 
+// This function parses the given input into either one or two commands and executes the one or two commands.
 void
 parse_input(char* input)
 {
@@ -100,18 +111,21 @@ parse_input(char* input)
 		int status;
 		waitpid(cpid, &status, 0);
 		if (WIFEXITED(status)) {
-			//printf("normal child execution.\n");
 		}
 	}
 	else {
+		// pipe is a boolean that tells us if the user wants to pipe
+		// pipeargs1 and pipeargs2 store the first and second command when piping
+		// args stores the command we want to run if we're not piping
 		int pipe = 0;
 		char* pipeargs1[100];
 		char* pipeargs2[100];
 		char* args[100];
 		int ii = 0;
 		char* arg = strtok(input, " \n");
+
+		// is arg a String? If so check if it's an operator and do the correct procedure. If it's not an operator then just add it as an argument.
 		while (arg) {
-			//printf("arg is: %s\n", arg);
 			if (strcmp(arg, ">") == 0) {
 				char* file = strtok(NULL, " \n");
 				int out = open(file, O_CREAT | O_WRONLY | O_TRUNC, 0666);
@@ -145,7 +159,7 @@ parse_input(char* input)
 			}
 			else if (strcmp(arg, "||") == 0) {
 				args[ii] = 0;
-				if (strcmp(args[0], "false") == 0) {
+				if (strcmp(args[0], "false") == 0 || exec_and_or(args[0], args) != 0) {
 					printf("in!\n");
 					char * command = strtok(NULL, " \n");
 					args[0] = command;
@@ -197,6 +211,7 @@ parse_input(char* input)
 int
 main(int argc, char* argv[])
 {
+	//Read from stdin
     if (argc == 1) {
 		while (1 == 1) {
         	printf("nush$ ");
@@ -223,11 +238,12 @@ main(int argc, char* argv[])
     		parse_input(cmd_cp);
 		}
 	}
+	
+	//Read from file
 	else {
 		FILE *fp = fopen(argv[1], "r");
 		char buffer[256] = {0};
 		while (fgets(buffer, 256, fp) != NULL) {
-			//printf("buffer is: %s\n", buffer);
 			char buffer_cp[256];
 			strcpy(buffer_cp, buffer);
 			char* command = strtok(buffer, " \n");
