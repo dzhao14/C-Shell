@@ -20,46 +20,44 @@ exec_background(char * command, char** args) {
 }
 
 void
-exec_pipe(char * command1, char** args1, char* command2, char** args2) {
+exec_pipe_h2(int pipe_fd[], char** args) {
 	int cpid;
-	int pipe_fds[2];
-	int err = pipe(pipe_fds);
 	if ((cpid = fork())) {
-		int status;
-		waitpid(cpid, &status, 0);
-		if (WIFEXITED(status)) {
-		}
 	}
 	else {
-		int cpid2;
-		if ((cpid2 = fork())) {
-			int status2;
-			waitpid(cpid2, &status2, 0);
-			if (WIFEXITED(status2)) {
-				//int in = open("temp.txt", O_RDONLY);
-				//dup2(in, 0);
-				//close(in);
-				dup2(pipe_fds[0], 0);
-				close(pipe_fds[1]);
-				execvp(command2, args2);
-				printf("second half failed\n");
-				exit(1);
-			}
-		}
-		else {
-		}
-		//int in = open(args1[1], O_RDONLY);
-		//dup2(in, 0);
-		//close(in);
-		//int out = open("temp.txt", O_CREAT | O_TRUNC | O_WRONLY, 0666);
-		//dup2(out, 1);
-		//close(out);
-		dup2(pipe_fds[1], 1);
-		close(pipe_fds[0]);
-		execvp(command1, args1);
-		printf("first half fails.\n");
+		dup2(pipe_fd[0], 0);
+		close(pipe_fd[1]);
+		execvp(args[0], args);
+		printf("error in h2.\n");
+		exit(1);
+	}	
+}
+
+void
+exec_pipe_h1(int pipe_fd[], char** args) {
+	int cpid;
+	if ((cpid = fork())) {
+	}
+	else {
+		dup2(pipe_fd[1], 1);
+		close(pipe_fd[0]);
+		execvp(args[0], args);
+		printf("error in h1.\n");
 		exit(1);
 	}
+}
+
+void
+exec_pipe(char** args1, char** args2) {
+	int status;
+	int pid;
+	int pipe_fds[2];
+	pipe(pipe_fds);
+	exec_pipe_h1(pipe_fds, args1);
+	exec_pipe_h2(pipe_fds, args2);
+	close(pipe_fds[0]);
+	close(pipe_fds[1]);
+	while ((pid = wait(&status)) != -1) {}
 }
 
 int
@@ -155,8 +153,9 @@ parse_input(char* input)
 			}
 			else if (strcmp(arg, "|") == 0) {
 				pipe = 1;
+				args[ii] = 0;
 				int jj = 0;
-				for (jj; args[jj]; jj++) {
+				for (jj; args[jj]!=0; jj++) {
 					pipeargs1[jj] = args[jj];
 				}
 				pipeargs1[jj] = 0;
@@ -184,7 +183,7 @@ parse_input(char* input)
 				pipeargs2[jj] = args[jj];
 			}
 			pipeargs2[jj] = 0;
-			exec_pipe(pipeargs1[0], pipeargs1, pipeargs2[0], pipeargs2);
+			exec_pipe(pipeargs1, pipeargs2);
 			exit(1);
 		}
 	}
