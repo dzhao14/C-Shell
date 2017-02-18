@@ -1,6 +1,6 @@
 ***This is my shell. My shell has LIMITED functionality which I'll describe below:***
 
-When running my shell, my shell can read at most two commands per line.
+When running my shell, my shell can read at most two commands per line. (In other words, my shell can only execute ONE operator per line.)
 My shell supports seven operators:
 	<
 	>
